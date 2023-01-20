@@ -1,0 +1,831 @@
+import pygame
+import os
+
+# basic attribute
+pygame.init()               # 初始化pygame
+SQUARE_WIDTH = 50           # 格子的寬
+SQUARE_HEIGHT = 50          # 格子的高
+WIDTH = SQUARE_WIDTH*8+20   # 螢幕寬
+HEIGHT = SQUARE_HEIGHT*8+20 # 螢幕高
+FPS = 60                    # frame
+clock = pygame.time.Clock() # time
+
+POS = pygame.mouse.get_pos()# 滑鼠的位置
+chess_pos = [["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+             ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
+             ["--", "--", "--", "--", "--", "--", "--", "--"],
+             ["--", "--", "--", "--", "--", "--", "--", "--"],
+             ["--", "--", "--", "--", "--", "--", "--", "--"],
+             ["--", "--", "--", "--", "--", "--", "--", "--"],
+             ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
+             ["wR", "wN", "wB", "wK", "wQ", "wB", "wN", "wR"]]# 棋盤的狀態(有無棋子和棋子的種類)
+running = True
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+reset = False
+pause = False
+
+turns = 0 # 換黑方還白方下
+# color(r, g, b)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+MINT = (189, 252, 201)
+BOARD_COLOR1 = (105, 105, 105)
+BOARD_COLOR2 = (211, 211, 211)
+PATH_COLOR = (250, 250, 210)
+
+
+# chess image load
+bK = pygame.image.load(os.path.join("chess", "bK.png")).convert()
+wK = pygame.image.load(os.path.join("chess", "wK.png")).convert()
+bQ = pygame.image.load(os.path.join("chess", "bQ.png")).convert()
+wQ = pygame.image.load(os.path.join("chess", "wQ.png")).convert()
+bR = pygame.image.load(os.path.join("chess", "bR.png")).convert()
+wR = pygame.image.load(os.path.join("chess", "wR.png")).convert()
+bN = pygame.image.load(os.path.join("chess", "bN.png")).convert()
+wN = pygame.image.load(os.path.join("chess", "wN.png")).convert()
+bB = pygame.image.load(os.path.join("chess", "bB.png")).convert()
+wB = pygame.image.load(os.path.join("chess", "wB.png")).convert()
+bP = pygame.image.load(os.path.join("chess", "bp.png")).convert()
+wP = pygame.image.load(os.path.join("chess", "wp.png")).convert()
+# font
+font_name = pygame.font.match_font('Microsoft JhengHei UI')
+def draw_text(surf, text, size, x, y):
+    font = pygame.font.Font(font_name, size)
+    text_surface = font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect()
+    text_rect.centerx = x
+    text_rect.top = y
+    surf.blit(text_surface, text_rect)
+    
+# draw the board
+def draw_board(x, y):
+    for i in range(8):
+        boardY = []
+        for j in range(8):
+            if x >= 8*SQUARE_WIDTH+10:
+                continue
+            if i % 2 == j % 2:
+                chess_board = ChessBoard(x, y, BOARD_COLOR1)
+                all_sprites.add(chess_board)
+                boardY.append(chess_board)
+            else:
+                chess_board = ChessBoard(x, y, BOARD_COLOR2)
+                all_sprites.add(chess_board)
+                boardY.append(chess_board)
+            x += SQUARE_WIDTH
+        y += SQUARE_HEIGHT
+        x = 10
+        board.append(boardY)
+        
+# draw chess
+def draw_king(x, y, color):
+    if color == BLACK:
+        king = King(x, y, color, "bk")
+        black_chess.add(king)
+    else:
+        king = King(x, y, color, "wk")
+        white_chess.add(king)
+    all_sprites.add(king)   
+def draw_queen(x, y, color, pro = False):
+    if pro:
+        if color == BLACK:
+            queen = Queen(x, y, color, "bq", pro)
+            black_chess.add(queen)
+        else:
+            queen = Queen(x, y, color, "wq", pro)
+            white_chess.add(queen)
+        all_sprites.add(queen)
+        return queen
+    if color == BLACK:
+        queen = Queen(x, y, color, "bq")
+        black_chess.add(queen)
+    else:
+        queen = Queen(x, y, color, "wq")
+        white_chess.add(queen)
+    all_sprites.add(queen)   
+def draw_rook(x, y, color, pro = False):
+    if pro:
+        if color == BLACK:
+            rook = Rook(x, y, color, "br", pro)
+            black_chess.add(rook)
+        else:
+            rook = Rook(x, y, color, "wr", pro)
+            white_chess.add(rook)
+        all_sprites.add(rook)  
+        return rook  
+    if color == BLACK:
+        rook = Rook(x, y, color, "br")
+        black_chess.add(rook)
+    else:
+        rook = Rook(x, y, color, "wr")
+        white_chess.add(rook)
+    all_sprites.add(rook)    
+def draw_knight(x, y, color, pro = False):
+    if pro:
+        if color == BLACK:
+            knight = Knight(x, y, color, "bn", pro)
+            black_chess.add(knight)
+        else:
+            knight = Knight(x, y, color, "wn", pro)
+            white_chess.add(knight)
+        all_sprites.add(knight)
+        return knight
+    if color == BLACK:
+        knight = Knight(x, y, color, "bn")
+        black_chess.add(knight)
+    else:
+        knight = Knight(x, y, color, "wn")
+        white_chess.add(knight)
+    all_sprites.add(knight)
+def draw_bishop(x, y, color, pro = False):
+    if pro:
+        if color == BLACK:
+            bishop = Bishop(x, y, color, "bb", pro)
+            black_chess.add(bishop)
+        else:
+            bishop = Bishop(x, y, color, "wb", pro)
+            white_chess.add(bishop)
+        all_sprites.add(bishop)
+        return bishop
+    if color == BLACK:
+        bishop = Bishop(x, y, color, "bb")
+        black_chess.add(bishop)
+    else:
+        bishop = Bishop(x, y, color, "wb")
+        white_chess.add(bishop)
+    all_sprites.add(bishop)
+def draw_pawn(x, y, color):
+    if color == BLACK:
+        pawn = Pawn(x, y, color, "bp")
+        black_chess.add(pawn)
+    else:
+        pawn = Pawn(x, y, color, "wp")
+        white_chess.add(pawn)
+    all_sprites.add(pawn)
+def draw_chess():
+    for i in range(0, 8):
+        k = 0
+        for j in chess_pos[i]:
+            if j == "bK":
+                draw_king(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, BLACK)
+            elif j == "bQ":
+                draw_queen(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, BLACK)
+            elif j == "bB":
+                draw_bishop(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, BLACK)
+            elif j == "bN":
+                draw_knight(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, BLACK)
+            elif j == "bR":
+                draw_rook(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, BLACK)
+            elif j == "bp":
+                draw_pawn(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, BLACK)
+            elif j == "wK":
+                draw_king(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, WHITE)
+            elif j == "wQ":
+                draw_queen(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, WHITE)
+            elif j == "wB":
+                draw_bishop(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, WHITE)
+            elif j == "wN":
+                draw_knight(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, WHITE)
+            elif j == "wR":
+                draw_rook(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, WHITE)
+            elif j == "wp":
+                draw_pawn(k*SQUARE_WIDTH+10, i*SQUARE_WIDTH+10, WHITE)
+            k += 1
+
+def init():
+    draw_board(10, 10)
+    draw_chess()
+    
+# 棋盤
+class ChessBoard(pygame.sprite.Sprite):
+    def __init__(self, x, y, color):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((SQUARE_WIDTH, SQUARE_HEIGHT))
+        self.color = color
+        self.image.fill(self.color)
+        # 棋盤的狀態
+        self.chess = chess_pos[(y-10)//SQUARE_WIDTH][(x-10)//SQUARE_HEIGHT]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y        
+        self.time = 0
+        self.state = False
+        
+        
+    def update(self):
+        click = pygame.mouse.get_pressed()
+        if click[0]:
+           self.image.fill(self.color)
+        if reset:
+            self.kill()
+    
+           
+
+black_chess_dict = {"bk": bK, "bq": bQ, "br": bR, "bn": bN, "bb": bB, "bp": bP}
+white_chess_dict = {"wk": wK, "wq": wQ, "wr": wR, "wn": wN, "wb": wB, "wp": wP}
+
+class Chess(pygame.sprite.Sprite):
+    def __init__(self, x, y, color, type, pro = False):
+        pygame.sprite.Sprite.__init__(self)
+        if color == BLACK:
+            self.image = black_chess_dict[type]
+            self.color = 'b'
+        else:
+            self.image = white_chess_dict[type]
+            self.color = 'w'
+        self.image = pygame.transform.scale(self.image, (SQUARE_WIDTH, SQUARE_HEIGHT))
+        if not(pro):
+            self.image.set_colorkey(WHITE)  
+        self.type = type
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.board_x = (self.rect.x-10) // SQUARE_WIDTH
+        self.board_y = (self.rect.y-10) // SQUARE_HEIGHT
+        self.board_x_ori = self.board_x
+        self.board_y_ori = self.board_y
+        self.state = False # 可不可以移動
+        self.path_block = []    
+        self.pro = pro
+        
+    def update(self):
+        global pause
+        if self.pro:
+            if not(pause):
+                self.kill()
+            return
+        if self.type == 'wp' and self.board_y == 0:
+            self.promotion()
+        elif self.type == 'bp' and self.board_y == 7:
+            self.promotion()
+        # 升變時暫停判斷
+        if pause:
+            return
+        if board[self.board_y][self.board_x].chess[0] != self.color:
+            if self.type == 'bk':
+                black_chess_dict['bk'] = False
+            elif self.type == 'wk':
+                white_chess_dict['wk'] = False
+            self.kill()
+            # pygame.sprite.Sprite.remove(self)
+        
+        
+        if self.click():
+            if (self.color == "w" and turns % 2 == 0) or (self.color == "b" and turns % 2 == 1):
+                self.path()
+                self.state = True
+                pygame.event.wait(pygame.MOUSEBUTTONUP)
+        if pygame.mouse.get_pressed()[0] and self.state:
+            # 回傳false代表移動完了
+            if not(self.move()):
+                self.state = False
+            pygame.event.wait(pygame.MOUSEBUTTONUP)
+        if reset:
+            pygame.sprite.Sprite.remove(self)
+            self.kill()
+        
+            
+    def click(self):
+        click = pygame.mouse.get_pressed()
+        # 檢察鼠標是否在格子內
+        x = POS[0] > self.rect.x and POS[0] < self.rect.x+SQUARE_WIDTH
+        y = POS[1] > self.rect.y and POS[1] < self.rect.y+SQUARE_HEIGHT
+        return click[0] and x and y
+    
+    def move(self):
+        POS = pygame.mouse.get_pos()
+        if board[POS[1]//SQUARE_HEIGHT][POS[0]//SQUARE_WIDTH].state:
+            self.rect.center = board[POS[1]//SQUARE_HEIGHT][POS[0]//SQUARE_WIDTH].rect.center
+            if board[POS[1]//SQUARE_HEIGHT][POS[0]//SQUARE_WIDTH].chess == '--':
+                board[self.board_y][self.board_x].chess, board[POS[1]//SQUARE_HEIGHT][POS[0]//SQUARE_WIDTH].chess = board[POS[1]//SQUARE_HEIGHT][POS[0]//SQUARE_WIDTH].chess, board[self.board_y][self.board_x].chess
+            else:
+                board[POS[1]//SQUARE_HEIGHT][POS[0]//SQUARE_WIDTH].chess = board[self.board_y][self.board_x].chess
+                board[self.board_y][self.board_x].chess = '--'
+            self.state = False
+            for i in self.path_block:
+                i.state = False
+            self.path_block.clear()
+            self.board_x = (self.rect.x-10) // SQUARE_WIDTH
+            self.board_y = (self.rect.y-10) // SQUARE_HEIGHT
+            global turns
+            turns += 1
+            return True
+        return False
+    
+class King(Chess):
+    def path(self):
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                if self.board_y + j >= 0 and self.board_x + i >= 0:
+                    if self.board_y + j <= 7 and self.board_x + i <= 7 :
+                        if board[self.board_y+j][self.board_x+i].chess == "--":
+                            board[self.board_y+j][self.board_x+i].image.fill(PATH_COLOR)
+                            board[self.board_y+j][self.board_x+i].state = True
+                            self.path_block.append(board[self.board_y+j][self.board_x+i])
+                        elif board[self.board_y+j][self.board_x+i].chess[0] != self.color:
+                            board[self.board_y+j][self.board_x+i].image.fill(PATH_COLOR)
+                            board[self.board_y+j][self.board_x+i].state = True
+                            self.path_block.append(board[self.board_y+j][self.board_x+i])
+                    else:
+                        continue
+        board[self.board_y][self.board_x].image.fill(board[self.board_y][self.board_x].color)
+        board[self.board_y][self.board_x].state = False
+                            
+class Queen(Chess):
+    def path(self):
+        # row
+        for i in range(1, 7-self.board_x+1):
+            if self.board_x + i <= 7:
+                if board[self.board_y][self.board_x+i].chess == "--":
+                    board[self.board_y][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x+i])
+                elif board[self.board_y][self.board_x+i].chess[0] != self.color:
+                    board[self.board_y][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x+i])
+                    break
+                else:
+                    break
+            else:
+                break
+        for i in range(1, self.board_x+1):
+            if self.board_x - i >= 0:
+                if board[self.board_y][self.board_x-i].chess == "--":
+                    board[self.board_y][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x-i])
+                elif board[self.board_y][self.board_x-i].chess[0] != self.color:
+                    board[self.board_y][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x-i])
+                    break
+                else:
+                    break
+            else:
+                break
+        # column
+        for i in range(1, 7-self.board_y+1):
+            if self.board_y + i <= 7:
+                if board[self.board_y+i][self.board_x].chess == "--":
+                    board[self.board_y+i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x])
+                elif board[self.board_y+i][self.board_x].chess[0] != self.color:
+                    board[self.board_y+i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x])
+                    break
+                else:
+                    break
+            else:
+                break
+        for i in range(1, self.board_y+1):
+            if self.board_y - i >= 0:
+                if board[self.board_y-i][self.board_x].chess == "--":
+                    board[self.board_y-i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x])
+                elif board[self.board_y-i][self.board_x].chess[0] != self.color:
+                    board[self.board_y-i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x])
+                    break
+                else:
+                    break
+            else:
+                break 
+        # 斜的
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x + i <= 7 and self.board_y + i <= 7:
+                if board[self.board_y+i][self.board_x+i].chess == "--":
+                    board[self.board_y+i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x+i])
+                elif board[self.board_y+i][self.board_x+i].chess[0] != self.color:
+                    board[self.board_y+i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x+i])
+                    break
+                else:
+                    break
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x + i <= 7 and self.board_y - i >= 0:
+                if board[self.board_y-i][self.board_x+i].chess == "--":
+                    board[self.board_y-i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x+i])
+                elif board[self.board_y-i][self.board_x+i].chess[0] != self.color:
+                    board[self.board_y-i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x+i])
+                    break
+                else:
+                    break
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x - i >= 0 and self.board_y + i <= 7:
+                if board[self.board_y+i][self.board_x-i].chess == "--":
+                    board[self.board_y+i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x-i])
+                elif board[self.board_y+i][self.board_x-i].chess[0] != self.color:
+                    board[self.board_y+i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x-i])
+                    break
+                else:
+                    break
+                    
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x - i >= 0 and self.board_y - i >= 0:
+                if board[self.board_y-i][self.board_x-i].chess == "--":
+                    board[self.board_y-i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x-i])
+                elif board[self.board_y-i][self.board_x-i].chess[0] != self.color:
+                    board[self.board_y-i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x-i])
+                    break
+                else:
+                    break
+    
+class Rook(Chess):
+    def path(self):
+        # row
+        for i in range(1, 7-self.board_x+1):
+            if self.board_x + i <= 7:
+                if board[self.board_y][self.board_x+i].chess == "--":
+                    board[self.board_y][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x+i])
+                elif board[self.board_y][self.board_x+i].chess[0] != self.color:
+                    board[self.board_y][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x+i])
+                    break
+                else:
+                    break
+            else:
+                break
+        for i in range(1, self.board_x+1):
+            if self.board_x - i >= 0:
+                if board[self.board_y][self.board_x-i].chess == "--":
+                    board[self.board_y][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x-i])
+                elif board[self.board_y][self.board_x-i].chess[0] != self.color:
+                    board[self.board_y][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y][self.board_x-i])
+                    break
+                else:
+                    break
+            else:
+                break
+        # column
+        for i in range(1, 7-self.board_y+1):
+            if self.board_y + i <= 7:
+                if board[self.board_y+i][self.board_x].chess == "--":
+                    board[self.board_y+i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x])
+                elif board[self.board_y+i][self.board_x].chess[0] != self.color:
+                    board[self.board_y+i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x])
+                    break
+                else:
+                    break
+            else:
+                break
+        for i in range(1, self.board_y+1):
+            if self.board_y - i >= 0:
+                if board[self.board_y-i][self.board_x].chess == "--":
+                    board[self.board_y-i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x])
+                elif board[self.board_y-i][self.board_x].chess[0] != self.color:
+                    board[self.board_y-i][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x])
+                    break
+                else:
+                    break
+            else:
+                break 
+    
+class Knight(Chess):
+    def path(self):
+        i = 1
+        j = 2
+        if self.board_x + i <= 7 and self.board_y + j <= 7:
+            if board[self.board_y+j][self.board_x+i].chess == "--":
+                board[self.board_y+j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x+i])
+            elif board[self.board_y+j][self.board_x+i].chess[0] != self.color:
+                board[self.board_y+j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x+i])
+        if self.board_x + i <= 7 and self.board_y - j >= 0:
+            if board[self.board_y-j][self.board_x+i].chess == "--":
+                board[self.board_y-j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x+i])
+            elif board[self.board_y-j][self.board_x+i].chess[0] != self.color:
+                board[self.board_y-j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x+i])
+        if self.board_x - i >= 0 and self.board_y + j <= 7:
+            if board[self.board_y+j][self.board_x-i].chess == "--":
+                board[self.board_y+j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x-i])
+            elif board[self.board_y+j][self.board_x-i].chess[0] != self.color:
+                board[self.board_y+j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x-i])
+        if self.board_x - i >= 0 and self.board_y - j >= 0:
+            if board[self.board_y-j][self.board_x-i].chess == "--":
+                board[self.board_y-j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x-i])
+            elif board[self.board_y-j][self.board_x-i].chess[0] != self.color:
+                board[self.board_y-j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x-i])
+        i, j = j, i
+        if self.board_x + i <= 7 and self.board_y + j <= 7:
+            if board[self.board_y+j][self.board_x+i].chess == "--":
+                board[self.board_y+j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x+i])
+            elif board[self.board_y+j][self.board_x+i].chess[0] != self.color:
+                board[self.board_y+j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x+i])
+        if self.board_x + i <= 7 and self.board_y - j >= 0:
+            if board[self.board_y-j][self.board_x+i].chess == "--":
+                board[self.board_y-j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x+i])
+            elif board[self.board_y-j][self.board_x+i].chess[0] != self.color:
+                board[self.board_y-j][self.board_x+i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x+i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x+i])
+        if self.board_x - i >= 0 and self.board_y + j <= 7:
+            if board[self.board_y+j][self.board_x-i].chess == "--":
+                board[self.board_y+j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x-i])
+            elif board[self.board_y+j][self.board_x-i].chess[0] != self.color:
+                board[self.board_y+j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y+j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y+j][self.board_x-i])
+        if self.board_x - i >= 0 and self.board_y - j >= 0:
+            if board[self.board_y-j][self.board_x-i].chess == "--":
+                board[self.board_y-j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x-i])
+            elif board[self.board_y-j][self.board_x-i].chess[0] != self.color:
+                board[self.board_y-j][self.board_x-i].image.fill(PATH_COLOR)
+                board[self.board_y-j][self.board_x-i].state = True
+                self.path_block.append(board[self.board_y-j][self.board_x-i])
+
+class Bishop(Chess):
+    def path(self):
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x + i <= 7 and self.board_y + i <= 7:
+                if board[self.board_y+i][self.board_x+i].chess == "--":
+                    board[self.board_y+i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x+i])
+                elif board[self.board_y+i][self.board_x+i].chess[0] != self.color:
+                    board[self.board_y+i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x+i])
+                    break
+                else:
+                    break
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x + i <= 7 and self.board_y - i >= 0:
+                if board[self.board_y-i][self.board_x+i].chess == "--":
+                    board[self.board_y-i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x+i])
+                elif board[self.board_y-i][self.board_x+i].chess[0] != self.color:
+                    board[self.board_y-i][self.board_x+i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x+i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x+i])
+                    break
+                else:
+                    break
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x - i >= 0 and self.board_y + i <= 7:
+                if board[self.board_y+i][self.board_x-i].chess == "--":
+                    board[self.board_y+i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x-i])
+                elif board[self.board_y+i][self.board_x-i].chess[0] != self.color:
+                    board[self.board_y+i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y+i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y+i][self.board_x-i])
+                    break
+                else:
+                    break
+                    
+        for i in range(1, max(self.board_x, 7-self.board_x, self.board_y, 7-self.board_y)+1):
+            if self.board_x - i >= 0 and self.board_y - i >= 0:
+                if board[self.board_y-i][self.board_x-i].chess == "--":
+                    board[self.board_y-i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x-i])
+                elif board[self.board_y-i][self.board_x-i].chess[0] != self.color:
+                    board[self.board_y-i][self.board_x-i].image.fill(PATH_COLOR)
+                    board[self.board_y-i][self.board_x-i].state = True
+                    self.path_block.append(board[self.board_y-i][self.board_x-i])
+                    break
+                else:
+                    break
+
+class Pawn(Chess):
+    def path(self):
+        if self.color == 'w':
+            # first step
+            if self.board_x == self.board_x_ori and self.board_y == self.board_y_ori:
+                for i in range(1, 3):
+                    if board[self.board_y-i][self.board_x].chess == "--":
+                        board[self.board_y-i][self.board_x].image.fill(PATH_COLOR)
+                        board[self.board_y-i][self.board_x].state = True
+                        self.path_block.append(board[self.board_y-i][self.board_x])
+                    else:
+                        break        
+            else:
+                if self.board_y - 1 >= 0 and board[self.board_y-1][self.board_x].chess == '--':
+                    board[self.board_y-1][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y-1][self.board_x].state = True
+                    self.path_block.append(board[self.board_y-1][self.board_x])
+            if self.board_y -1 >= 0:
+                if self.board_x + 1 <= 7 and board[self.board_y-1][self.board_x+1].chess[0] == 'b':
+                    board[self.board_y-1][self.board_x+1].image.fill(PATH_COLOR)
+                    board[self.board_y-1][self.board_x+1].state = True
+                    self.path_block.append(board[self.board_y-1][self.board_x+1])
+                if self.board_x - 1 >= 0 and board[self.board_y-1][self.board_x-1].chess[0] == 'b':
+                    board[self.board_y-1][self.board_x-1].image.fill(PATH_COLOR)
+                    board[self.board_y-1][self.board_x-1].state = True
+                    self.path_block.append(board[self.board_y-1][self.board_x-1])
+                    
+        else:
+            if self.board_x == self.board_x_ori and self.board_y == self.board_y_ori:
+                for i in range(1, 3):
+                    if board[self.board_y+i][self.board_x].chess == "--":
+                        board[self.board_y+i][self.board_x].image.fill(PATH_COLOR)
+                        board[self.board_y+i][self.board_x].state = True
+                        self.path_block.append(board[self.board_y+i][self.board_x])
+                    else:
+                        break
+            else:
+                if self.board_y + 1 <= 7 and board[self.board_y+1][self.board_x].chess == '--':
+                    board[self.board_y+1][self.board_x].image.fill(PATH_COLOR)
+                    board[self.board_y+1][self.board_x].state = True
+                    self.path_block.append(board[self.board_y+1][self.board_x])
+            if self.board_y + 1 <= 7:
+                if self.board_x + 1 <= 7 and board[self.board_y+1][self.board_x+1].chess[0] == 'w':
+                    board[self.board_y+1][self.board_x+1].image.fill(PATH_COLOR)
+                    board[self.board_y+1][self.board_x+1].state = True
+                    self.path_block.append(board[self.board_y+1][self.board_x+1])
+                if self.board_x - 1 >= 0 and board[self.board_y+1][self.board_x-1].chess[0] == 'w':
+                    board[self.board_y+1][self.board_x-1].image.fill(PATH_COLOR)
+                    board[self.board_y+1][self.board_x-1].state = True
+                    self.path_block.append(board[self.board_y+1][self.board_x-1])
+        #promotion(升變)
+    def promotion(self):
+        global pause
+        pause = True
+        if self.color == 'w' and self.board_y == 0:
+            x = self.rect.x
+            y = self.rect.y+SQUARE_HEIGHT
+            queen = draw_queen(x, y, WHITE, True)
+            bishop = draw_bishop(x, y+SQUARE_HEIGHT, WHITE, True)
+            knight = draw_knight(x, y+SQUARE_HEIGHT*2, WHITE, True)
+            rook = draw_rook(x, y+SQUARE_HEIGHT*3, WHITE, True)
+            if queen.click():
+                draw_queen(self.rect.x, self.rect.y, WHITE)
+                pause = False
+                self.kill()
+            elif bishop.click():
+                draw_bishop(self.rect.x, self.rect.y, WHITE)
+                pause = False
+                self.kill()
+            elif knight.click():
+                draw_knight(self.rect.x, self.rect.y, WHITE)
+                pause = False
+                self.kill()
+            elif rook.click():
+                draw_rook(self.rect.x, self.rect.y, WHITE)
+                pause = False
+                self.kill()
+            # 等前一次的判定完全結束
+            pygame.event.wait(pygame.MOUSEBUTTONUP)
+        elif self.color == 'b' and self.board_y == 7:
+            x = self.rect.x
+            y = self.rect.y-SQUARE_HEIGHT
+            queen = draw_queen(x, y, BLACK, True)
+            bishop = draw_bishop(x, y-SQUARE_HEIGHT, BLACK, True)
+            knight = draw_knight(x, y-SQUARE_HEIGHT*2, BLACK, True)
+            rook = draw_rook(x, y-SQUARE_HEIGHT*3, BLACK, True)
+            if queen.click():
+                draw_queen(self.rect.x, self.rect.y, BLACK)
+                pause = False
+                self.kill()
+            elif bishop.click():
+                draw_bishop(self.rect.x, self.rect.y, BLACK)
+                pause = False
+                self.kill()
+            elif knight.click():
+                draw_knight(self.rect.x, self.rect.y, BLACK)
+                pause = False
+                self.kill()
+            elif rook.click():
+                draw_rook(self.rect.x, self.rect.y, BLACK)
+                pause = False
+                self.kill()
+            # 等前一次的判定完全結束
+            pygame.event.wait(pygame.MOUSEBUTTONUP)
+                           
+
+class DefeatButton(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((300, 150))
+        self.color = RED
+        self.rect = self.image.get_rect()
+        self.rect.center = HEIGHT/2, WIDTH/2
+        
+    def update(self):
+        x = POS[0] > self.rect.left and POS[0] < self.rect.right
+        y = POS[1] > self.rect.top and POS[1] < self.rect.bottom
+        if pygame.mouse.get_pressed()[0] and x and y:
+            black_chess_dict['bk'] = bK
+            white_chess_dict['wk'] = wK
+            global reset
+            reset = True
+            self.kill()
+            
+
+all_sprites = pygame.sprite.Group()
+black_chess = pygame.sprite.Group()
+white_chess = pygame.sprite.Group()
+board = []
+
+draw_board(10, 10)
+
+draw_chess()
+draw_text(screen, 'dksjld', 60, 10, 10)
+
+while running:
+    # reset the game
+    if reset:
+        all_sprites = pygame.sprite.Group()
+        black_chess = pygame.sprite.Group()
+        white_chess = pygame.sprite.Group()
+        board = []
+        chess_pos = [["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+                    ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
+                    ["--", "--", "--", "--", "--", "--", "--", "--"],
+                    ["--", "--", "--", "--", "--", "--", "--", "--"],
+                    ["--", "--", "--", "--", "--", "--", "--", "--"],
+                    ["--", "--", "--", "--", "--", "--", "--", "--"],
+                    ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
+                    ["wR", "wN", "wB", "wK", "wQ", "wB", "wN", "wR"]]
+        turns = 0
+        reset = False
+        init()
+    # frame
+    clock.tick(FPS)
+    
+    # input
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            
+    # update
+    POS = pygame.mouse.get_pos()
+    all_sprites.update()        
+    draw_text(screen, "dksjld", 60, HEIGHT/2, WIDTH/2)
+    
+    # screen
+    screen.fill(BLACK)      
+    all_sprites.draw(screen)
+    pygame.display.update()
+      # if either side loses
+    if black_chess_dict['bk'] == False or white_chess_dict['wk'] == False:
+        defeatbutton = DefeatButton()
+        all_sprites.add(defeatbutton)
+        draw_text(defeatbutton.image, "Game Over", 60, HEIGHT/2, WIDTH/2)
+
+# quit the game
+pygame.quit()
